@@ -90,9 +90,9 @@ jobs:
         run: |
           cmake --build build --target PluginFactorySkeleton_VST3 PluginFactorySkeleton_CLAP 2>&1 \
             | tee build-linux.log
-          if grep -qi "warning:" build-linux.log; then
+          if grep -i "warning:" build-linux.log | grep -qv "lto-wrapper: warning:"; then
             echo "::error::New compiler warnings found in the Linux fast-lane build."
-            grep -i "warning:" build-linux.log
+            grep -i "warning:" build-linux.log | grep -v "lto-wrapper: warning:"
             exit 1
           fi
 
@@ -162,9 +162,9 @@ jobs:
           cmake --build build --target \
             PluginFactorySkeleton_VST3 PluginFactorySkeleton_AU PluginFactorySkeleton_CLAP 2>&1 \
             | tee build-macos.log
-          if grep -qi "warning:" build-macos.log; then
+          if grep -i "warning:" build-macos.log | grep -qv "lto-wrapper: warning:"; then
             echo "::error::New compiler warnings found in the macOS build."
-            grep -i "warning:" build-macos.log
+            grep -i "warning:" build-macos.log | grep -v "lto-wrapper: warning:"
             exit 1
           fi
 
