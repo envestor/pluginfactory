@@ -19,6 +19,7 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch: {}
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -213,11 +214,12 @@ jobs:
   # ---------------------------------------------------------------------
   # Fresh-checkout proof: no cache steps at all, so a passing run proves
   # the build does not secretly depend on anything a cold runner lacks.
-  # Runs only on push to main to avoid duplicating cost on every PR push.
+  # Runs on push to main and on manual dispatch, so it can be proven once
+  # against a PR branch before merge without duplicating cost on every PR push.
   # ---------------------------------------------------------------------
   cold-checkout-proof:
     name: cold-checkout-proof (ubuntu-24.04, no cache)
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
