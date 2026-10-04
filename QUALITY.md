@@ -1,11 +1,14 @@
-# QUALITY.md v1 (draft — not yet founder-approved)
+# QUALITY.md v1 (founder-approved 2026-10-04, via PLU-21)
 
 Numeric quality targets for the Bespoke Developer PlugOut plugin factory. Every
 number below has a stated measurement method so a target can be argued with on
 its reasoning, not just its digit. Targets marked **(provisional)** are best
 estimates pending measurement on real hardware we do not yet have in CI
 (physical macOS/Windows machines, real audio interfaces) and will be replaced
-once CI-D1 gives us real runner data.
+once CI-D1 gives us real runner data. Provisional status does not mean
+unapproved — the founder approved shipping gates 4, 5 and 6 against these
+numbers, provisional ones included, with the explicit understanding that
+CI-D1 will supersede the provisional entries with measured values.
 
 ## 1. Aliasing (gate 4)
 
