@@ -116,6 +116,22 @@ once CI-D1 gives us real runner data.
 - **Method:** parametrised test sweep in CI-C2 across the full matrix; failure
   at any single combination fails the gate.
 
+## 10. macOS universal binary (gate 1)
+
+- **Target:** every macOS build artefact (Standalone, VST3, AU, CLAP) is a
+  **universal binary** containing both `arm64` and `x86_64` slices, built
+  with `CMAKE_OSX_DEPLOYMENT_TARGET` set to **macOS 11 or lower**, and
+  confirmed to load on both Intel and Apple Silicon Macs.
+- **Reason:** an Apple-Silicon-only build loads silently for most of the team
+  (all on arm64 hardware) but fails outright for an Intel user — exactly the
+  gap that caused the founder's Intel Mac retest to fail auval validation
+  with "didn't find the component". A single-arch regression must be caught
+  in CI, not by a founder's manual retest.
+- **Method:** CI gate 1 runs `lipo -archs` on each built macOS bundle and
+  fails the job if either `arm64` or `x86_64` is missing. The macOS artifact
+  includes the Standalone app so a human can confirm "loads on Intel and
+  Apple Silicon" without a DAW.
+
 ## How to update this document
 
 Any change to a number here needs founder approval (same gate as v1). Propose
