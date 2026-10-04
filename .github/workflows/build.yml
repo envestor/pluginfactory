@@ -1,0 +1,252 @@
+name: build
+
+# Gate 1 (PLU-22): clean build on a fresh checkout.
+#
+# Tiering (founder-approved):
+#   - every push and every PR (drafts included) -> Linux fast lane only
+#     (configure + build VST3/CLAP, format/lint)
+#   - a PR marked ready for review, and pushes to a non-draft PR,
+#     and pushes to main                        -> full macOS + Windows matrix
+#
+# GitHub-hosted runners only, pinned to specific images (not "-latest").
+# Public repo on standard runners: Actions minutes are unmetered/free
+# regardless of OS, so this workflow never touches paid minutes as long as
+# no self-hosted or larger runner label is introduced.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Bumping JUCE's pinned tag (CMakeLists.txt) changes this hash, which
+  # changes every cache key below -- an upgrade never silently reuses a
+  # stale dependency cache.
+  DEPS_KEY_FILE_HASH: ${{ hashFiles('CMakeLists.txt') }}
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Fast lane: runs on every push and every PR event, drafts included.
+  # ---------------------------------------------------------------------
+  linux-fast-lane:
+    name: linux-fast-lane (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out PR head (fresh checkout, no history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build ccache \
+            libasound2-dev libjack-jackd2-dev \
+            libcurl4-openssl-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxrender-dev \
+            libwebkit2gtk-4.1-dev libgtk-3-dev
+
+      - name: Format/lint check
+        run: |
+          if [ -f .clang-format ]; then
+            find Source -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run -Werror
+          else
+            echo "No .clang-format in the repo yet; skipping style enforcement for this gate."
+          fi
+
+      - name: Cache JUCE/CLAP FetchContent sources
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/build/_deps
+          key: deps-linux-ubuntu-24.04-${{ env.DEPS_KEY_FILE_HASH }}
+          restore-keys: |
+            deps-linux-ubuntu-24.04-
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-linux-ubuntu-24.04-${{ env.DEPS_KEY_FILE_HASH }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-linux-ubuntu-24.04-${{ env.DEPS_KEY_FILE_HASH }}-
+            ccache-linux-ubuntu-24.04-
+
+      - name: Configure (VST3 + CLAP only)
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build VST3 + CLAP
+        run: |
+          cmake --build build --target PluginFactorySkeleton_VST3 PluginFactorySkeleton_CLAP 2>&1 \
+            | tee build-linux.log
+          if grep -qi "warning:" build-linux.log; then
+            echo "::error::New compiler warnings found in the Linux fast-lane build."
+            grep -i "warning:" build-linux.log
+            exit 1
+          fi
+
+      - name: Upload Linux build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-vst3-clap
+          path: |
+            build/PluginFactorySkeleton_artefacts/**/VST3/**
+            build/PluginFactorySkeleton_artefacts/**/CLAP/**
+          retention-days: 5
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------
+  # Full matrix: only for non-draft PR pushes/ready-for-review, and main.
+  # ---------------------------------------------------------------------
+  full-matrix:
+    name: full-matrix (${{ matrix.os }})
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - name: Check out PR head (fresh checkout, no history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Cache JUCE/CLAP FetchContent sources
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/build/_deps
+          key: deps-${{ matrix.os }}-${{ env.DEPS_KEY_FILE_HASH }}
+          restore-keys: |
+            deps-${{ matrix.os }}-
+
+      - name: Cache ccache (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-${{ matrix.os }}-${{ env.DEPS_KEY_FILE_HASH }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ matrix.os }}-${{ env.DEPS_KEY_FILE_HASH }}-
+            ccache-${{ matrix.os }}-
+
+      - name: Install ccache (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ccache ninja
+
+      - name: Configure (macOS, all formats)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build (macOS, VST3 + AU + CLAP)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cmake --build build --target \
+            PluginFactorySkeleton_VST3 PluginFactorySkeleton_AU PluginFactorySkeleton_CLAP 2>&1 \
+            | tee build-macos.log
+          if grep -qi "warning:" build-macos.log; then
+            echo "::error::New compiler warnings found in the macOS build."
+            grep -i "warning:" build-macos.log
+            exit 1
+          fi
+
+      - name: Upload macOS build artifacts
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-vst3-au-clap
+          path: |
+            build/PluginFactorySkeleton_artefacts/**/VST3/**
+            build/PluginFactorySkeleton_artefacts/**/AU/**
+            build/PluginFactorySkeleton_artefacts/**/CLAP/**
+          retention-days: 5
+          if-no-files-found: error
+
+      - name: Configure (Windows, VST3 + CLAP)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build (Windows, VST3 + CLAP)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --target PluginFactorySkeleton_VST3 PluginFactorySkeleton_CLAP `
+            2>&1 | Tee-Object -FilePath build-windows.log
+          $warnings = Select-String -Path build-windows.log -Pattern 'warning [A-Z]+[0-9]+' -AllMatches
+          if ($warnings) {
+            Write-Host "::error::New compiler warnings found in the Windows build."
+            $warnings | ForEach-Object { Write-Host $_.Line }
+            exit 1
+          }
+
+      - name: Upload Windows build artifacts
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-vst3-clap
+          path: |
+            build/PluginFactorySkeleton_artefacts/**/VST3/**
+            build/PluginFactorySkeleton_artefacts/**/CLAP/**
+          retention-days: 5
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------
+  # Fresh-checkout proof: no cache steps at all, so a passing run proves
+  # the build does not secretly depend on anything a cold runner lacks.
+  # Runs only on push to main to avoid duplicating cost on every PR push.
+  # ---------------------------------------------------------------------
+  cold-checkout-proof:
+    name: cold-checkout-proof (ubuntu-24.04, no cache)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build \
+            libasound2-dev libjack-jackd2-dev \
+            libcurl4-openssl-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxrender-dev \
+            libwebkit2gtk-4.1-dev libgtk-3-dev
+
+      - name: Configure and build with zero caches restored
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target PluginFactorySkeleton_VST3 PluginFactorySkeleton_CLAP
