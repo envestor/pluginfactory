@@ -11,7 +11,7 @@ This is the minimal CI skeleton (PLU-20), not yet the full shared template. Anyt
 Pinned via `FetchContent` in `CMakeLists.txt` to tag `8.0.4`. Upgrading JUCE for all plugins means bumping this tag deliberately and re-running the full CI matrix, not a casual change.
 
 ## CLAP support
-Provided by `clap-juce-extensions` (MIT licence, see `THIRD_PARTY.md`), fetched via `FetchContent` pinned in `CMakeLists.txt`. Currently pinned to `main` — replace with a pinned commit SHA before this skeleton becomes the production template, so CLAP builds stay reproducible.
+Provided by `clap-juce-extensions` (MIT licence, see `THIRD_PARTY.md`), fetched via `FetchContent` pinned in `CMakeLists.txt` to commit `55525c9858d4b25687be7759a5e0f70eccef218e` (no tagged release exists upstream, so a commit SHA is used instead of a branch, keeping CLAP builds reproducible).
 
 ## Licensing
 `LICENSE` at the repo root is "All rights reserved." — this is proprietary commercial software, not open source.
