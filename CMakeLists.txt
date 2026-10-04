@@ -38,6 +38,7 @@ set(PLUGIN_CODE "Skl1")
 
 juce_add_plugin(PluginFactorySkeleton
     COMPANY_NAME "The Bespoke Developer PlugOut"
+    BUNDLE_ID "com.bespokedeveloperplugout.pluginfactoryskeleton"
     PLUGIN_MANUFACTURER_CODE ${PLUGIN_MANUFACTURER_CODE}
     PLUGIN_CODE ${PLUGIN_CODE}
     FORMATS Standalone VST3 AU
