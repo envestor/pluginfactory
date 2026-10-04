@@ -22,11 +22,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(JUCE)
 
 # CLAP JUCE extensions, MIT licensed. See THIRD_PARTY.md.
+# No tagged release exists upstream; pinned to a specific commit SHA (not a
+# branch) so the build is reproducible.
 FetchContent_Declare(
     clap-juce-extensions
     GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
-    GIT_TAG        main
-    GIT_SHALLOW    TRUE
+    GIT_TAG        55525c9858d4b25687be7759a5e0f70eccef218e
 )
 FetchContent_MakeAvailable(clap-juce-extensions)
 

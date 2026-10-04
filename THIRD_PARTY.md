@@ -8,7 +8,7 @@
 ## CLAP JUCE Extensions
 - Source: `https://github.com/free-audio/clap-juce-extensions`
 - Licence: MIT
-- Usage: fetched at build time via CMake `FetchContent`, pinned to a commit/tag. Provides the CLAP wrapper target on top of JUCE's `juce_add_plugin`. MIT is compatible with our closed-source distribution; recorded here as required before adding any third-party dependency.
+- Usage: fetched at build time via CMake `FetchContent`, pinned to commit `55525c9858d4b25687be7759a5e0f70eccef218e` (no tagged release exists upstream, so a commit SHA is used instead of a branch). Provides the CLAP wrapper target on top of JUCE's `juce_add_plugin`. MIT is compatible with our closed-source distribution; recorded here as required before adding any third-party dependency.
 
 ## pluginval
 - Source: `https://github.com/Tracktion/pluginval`
