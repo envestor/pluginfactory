@@ -27,12 +27,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # Bumping JUCE's pinned tag (CMakeLists.txt) changes this hash, which
-  # changes every cache key below -- an upgrade never silently reuses a
-  # stale dependency cache.
-  DEPS_KEY_FILE_HASH: ${{ hashFiles('CMakeLists.txt') }}
-
 jobs:
   # ---------------------------------------------------------------------
   # Fast lane: runs on every push and every PR event, drafts included.
@@ -72,7 +66,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/build/_deps
-          key: deps-linux-ubuntu-24.04-${{ env.DEPS_KEY_FILE_HASH }}
+          key: deps-linux-ubuntu-24.04-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: |
             deps-linux-ubuntu-24.04-
 
@@ -80,9 +74,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-linux-ubuntu-24.04-${{ env.DEPS_KEY_FILE_HASH }}-${{ github.run_id }}
+          key: ccache-linux-ubuntu-24.04-${{ hashFiles('CMakeLists.txt') }}-${{ github.run_id }}
           restore-keys: |
-            ccache-linux-ubuntu-24.04-${{ env.DEPS_KEY_FILE_HASH }}-
+            ccache-linux-ubuntu-24.04-${{ hashFiles('CMakeLists.txt') }}-
             ccache-linux-ubuntu-24.04-
 
       - name: Configure (VST3 + CLAP only)
@@ -135,7 +129,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/build/_deps
-          key: deps-${{ matrix.os }}-${{ env.DEPS_KEY_FILE_HASH }}
+          key: deps-${{ matrix.os }}-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: |
             deps-${{ matrix.os }}-
 
@@ -144,9 +138,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/ccache
-          key: ccache-${{ matrix.os }}-${{ env.DEPS_KEY_FILE_HASH }}-${{ github.run_id }}
+          key: ccache-${{ matrix.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.run_id }}
           restore-keys: |
-            ccache-${{ matrix.os }}-${{ env.DEPS_KEY_FILE_HASH }}-
+            ccache-${{ matrix.os }}-${{ hashFiles('CMakeLists.txt') }}-
             ccache-${{ matrix.os }}-
 
       - name: Install ccache (macOS)
