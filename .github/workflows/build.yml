@@ -117,9 +117,7 @@ jobs:
   # ---------------------------------------------------------------------
   full-matrix:
     name: full-matrix (${{ matrix.os }})
-    if: |
-      github.event_name == 'push' ||
-      github.event.pull_request.draft == false
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
     strategy:
       fail-fast: false
       matrix:
