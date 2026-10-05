@@ -100,7 +100,7 @@ jobs:
       - name: Build and run shared DSP library offline tests
         run: |
           cmake --build build --target bdpo_dsp_tests
-          ./build/bdpo_dsp_tests
+          ./build/dsp/bdpo_dsp_tests
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
