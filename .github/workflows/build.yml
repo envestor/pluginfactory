@@ -161,12 +161,12 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
-      - name: Build (macOS, VST3 + AU + CLAP)
+      - name: Build (macOS, Standalone + VST3 + AU + CLAP)
         if: runner.os == 'macOS'
         shell: bash
         run: |
           cmake --build build --target \
-            PluginFactorySkeleton_VST3 PluginFactorySkeleton_AU PluginFactorySkeleton_CLAP 2>&1 \
+            PluginFactorySkeleton_Standalone PluginFactorySkeleton_VST3 PluginFactorySkeleton_AU PluginFactorySkeleton_CLAP 2>&1 \
             | tee build-macos.log
           if grep -i "warning:" build-macos.log | grep -qv "lto-wrapper: warning:"; then
             echo "::error::New compiler warnings found in the macOS build."
@@ -174,12 +174,37 @@ jobs:
             exit 1
           fi
 
+      - name: Verify universal binary (arm64 + x86_64)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          fail=0
+          for exe in \
+            "build/PluginFactorySkeleton_artefacts/Release/Standalone/PluginFactorySkeleton.app/Contents/MacOS/PluginFactorySkeleton" \
+            "build/PluginFactorySkeleton_artefacts/Release/VST3/PluginFactorySkeleton.vst3/Contents/MacOS/PluginFactorySkeleton" \
+            "build/PluginFactorySkeleton_artefacts/Release/AU/PluginFactorySkeleton.component/Contents/MacOS/PluginFactorySkeleton" \
+            "build/PluginFactorySkeleton_artefacts/Release/CLAP/PluginFactorySkeleton.clap/Contents/MacOS/PluginFactorySkeleton"; do
+            if [ ! -f "$exe" ]; then
+              echo "::error::Expected binary not found: $exe"
+              fail=1
+              continue
+            fi
+            archs=$(lipo -archs "$exe")
+            echo "$exe: $archs"
+            if ! echo "$archs" | grep -q "arm64" || ! echo "$archs" | grep -q "x86_64"; then
+              echo "::error::$exe is not a universal binary (lipo -archs: $archs)"
+              fail=1
+            fi
+          done
+          exit $fail
+
       - name: Upload macOS build artifacts
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
-          name: macos-vst3-au-clap
+          name: macos-standalone-vst3-au-clap
           path: |
+            build/PluginFactorySkeleton_artefacts/**/Standalone/**
             build/PluginFactorySkeleton_artefacts/**/VST3/**
             build/PluginFactorySkeleton_artefacts/**/AU/**
             build/PluginFactorySkeleton_artefacts/**/CLAP/**
