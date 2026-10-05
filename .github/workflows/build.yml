@@ -4,7 +4,7 @@ name: build
 #
 # Tiering (founder-approved):
 #   - every push and every PR (drafts included) -> Linux fast lane only
-#     (configure + build VST3/CLAP, format/lint)
+#     (configure + build VST3/CLAP, format/lint, shared DSP library offline tests)
 #   - a PR marked ready for review, and pushes to a non-draft PR,
 #     and pushes to main                        -> full macOS + Windows matrix
 #
@@ -96,6 +96,11 @@ jobs:
             grep -i "warning:" build-linux.log | grep -v "lto-wrapper: warning:"
             exit 1
           fi
+
+      - name: Build and run shared DSP library offline tests
+        run: |
+          cmake --build build --target bdpo_dsp_tests
+          ./build/bdpo_dsp_tests
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
