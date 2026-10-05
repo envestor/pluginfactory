@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
 
+# macOS: build a universal binary (Apple Silicon + Intel) and set a
+# deployment target low enough that the Intel slice loads on older hosts.
+# Must be set before project() so it applies to the compiler checks project()
+# triggers, not just the plugin target.
+if(APPLE)
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build architectures for macOS" FORCE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS deployment target" FORCE)
+endif()
+
 project(PluginFactorySkeleton VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 17)
