@@ -12,7 +12,8 @@ CI-D1 will supersede the provisional entries with measured values.
 
 ## 1. Aliasing (gate 4)
 
-- **Target:** aliased energy at least **-60 dBFS** below the fundamental,
+- **Target:** aliased energy at least **-60 dB relative to the fundamental**
+  (not dBFS — the reference is the fundamental's own level, not full scale),
   measured with a logarithmic sine sweep 20 Hz–20 kHz at 44.1 kHz sample rate,
   plugin driven to maximum saturation/drive, 4x oversampling enabled.
 - **Reason:** -60 dB is below typical perceptual threshold for aliasing
@@ -67,8 +68,10 @@ CI-D1 will supersede the provisional entries with measured values.
 - **Reason:** a producer loading 10+ instances while building a session
   notices anything above half a second per instance; 500 ms is the point
   where loading stops feeling instant.
-- **Method:** timestamp from `createEditor()` call to the WebView's first
-  `pointerdown`-ready state, averaged over 10 cold loads.
+- **Method:** timestamp from the plugin constructor (object creation, before
+  `createEditor()`) to the WebView's first `pointerdown`-ready state, averaged
+  over 10 cold loads, so editor-creation overhead is not excluded from the
+  number the target describes.
 
 ## 6. Null-test residual (gate 4/7)
 
@@ -92,8 +95,10 @@ CI-D1 will supersede the provisional entries with measured values.
 - **Reason:** 50 MB per instance keeps 40 instances under 2 GB, a reasonable
   ceiling for a producer's session before memory becomes the limiting factor
   ahead of CPU.
-- **Method:** measure process RSS delta between plugin construction and 10
-  seconds after `prepareToPlay`, on the fixed CI runner.
+- **Method:** measure process RSS delta between a baseline taken immediately
+  before the plugin is constructed and the RSS 10 seconds after
+  `prepareToPlay`, on the fixed CI runner, so constructor allocations are
+  included in "per instance" rather than excluded as pre-existing baseline.
 
 ## 8. Visual-diff tolerance (gate 6)
 
