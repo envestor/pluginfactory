@@ -9,6 +9,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 endif()
 
+add_subdirectory(dsp)
+
 include(FetchContent)
 
 # JUCE, pinned to release tag 8.0.4. Never vendored: fetched fresh at configure time.
