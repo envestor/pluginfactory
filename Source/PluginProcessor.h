@@ -2,10 +2,13 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "saturation/SaturationStage.h"
+
 // Permanent parameter ID. Never rename or remove once released; only add new ones.
 namespace ParamIDs
 {
     static const juce::String gainDb { "gainDb" };
+    static const juce::String drive { "drive" };
 }
 
 class PluginFactorySkeletonAudioProcessor : public juce::AudioProcessor
@@ -48,6 +51,13 @@ private:
 
     juce::LinearSmoothedValue<float> smoothedGain;
     std::atomic<float>* gainParam = nullptr;
+    std::atomic<float>* driveParam = nullptr;
+
+    // One saturation stage per channel so left/right smoothing state never
+    // cross-talks. Sized for stereo; processBlock only drives as many as the
+    // host gives us.
+    static constexpr int maxChannels = 2;
+    bdpo::dsp::SaturationStage saturationStages[maxChannels];
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginFactorySkeletonAudioProcessor)
 };
